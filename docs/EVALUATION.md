@@ -38,3 +38,12 @@ Stockfish is found on `PATH` (`brew install stockfish`).
 `scripts/calibrate_baselines.py` rates the baseline engines; `scripts/calibrate_levels.py` plays
 every humanised level against Stockfish and stores the *measured* Elo in
 `src/chessrl/levels/levels.json`, which the UIs display instead of the nominal target.
+
+## Status of the level calibration (2026-10-22)
+
+* **Error tuning (done):** every level's `error_scale` is fitted so its average centipawn loss
+  matches the target for its nominal Elo (ACPL within 1-2 cp of target on 70 positions).
+* **Elo by games (inconclusive, not published):** a first pass with 4 games per anchor produced
+  non-monotonic values (e.g. Advanced 721, Expert 923) — pure noise plus saturated anchors. Until a
+  larger run (≥ 20 games per anchor, idle machine) is done, the UIs show the *nominal* Elo, which
+  should be read as "targets the typical error profile of that rating", not as a measured rating.
