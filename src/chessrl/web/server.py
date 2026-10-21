@@ -12,7 +12,10 @@ from importlib import resources
 from urllib.parse import parse_qs, urlparse
 
 from ..agents.registry import list_opponents, make_agent
+from ..analysis import analyse_game, annotate_game, eval_graph_svg
+from ..analysis.live import LiveAnnotator
 from ..engine import BLACK, WHITE, Board, Move
+from ..levels.book import default_book
 from ..play import GameSession, TimeControl
 
 
@@ -23,6 +26,7 @@ class Hub:
         self.sessions: dict[str, GameSession] = {}
         self.thinking: dict[str, bool] = {}
         self.errors: dict[str, str] = {}
+        self.analyses: dict[str, dict] = {}
         self.lock = threading.Lock()
 
     # ------------------------------------------------------------- lifecycle
@@ -34,7 +38,7 @@ class Hub:
             color = random.choice(["white", "black"])
         human = {"white": WHITE, "black": BLACK, "none": None}[color]
         seed = params.get("seed")
-        ai = make_agent(params.get("opponent", "ab2"), seed=seed)
+        ai = make_agent(params.get("opponent", "level:Club"), seed=seed)
         tc = TimeControl.parse(params["tc"]) if params.get("tc") else None
         headers = {
             "White": "You" if human == WHITE else ai.name,
@@ -46,6 +50,7 @@ class Hub:
             realtime=bool(params.get("realtime", True)),
             allow_takebacks=bool(params.get("takebacks", True)),
             headers=headers,
+            annotator=LiveAnnotator() if params.get("live_annotation") else None,
         )
         sid = uuid.uuid4().hex[:12]
         with self.lock:
@@ -116,7 +121,42 @@ class Hub:
             "draw_offered": s.draw_offered_by is not None,
             "error": self.errors.pop(sid, None),
             "opponent": s.ai.name if s.ai else None,
+            "opening": _opening(board),
+            "annotations": {
+                str(p): {"label": a.label, "symbol": a.symbol, "best": a.best_san,
+                         "eval": a.eval_after, "accuracy": round(a.accuracy, 1)}
+                for p, a in list(s.annotations.items())
+            },
+            "live_eval": (lambda last: None if last is None else last.eval_after)(
+                s.annotations[max(s.annotations)] if s.annotations else None),
         }
+
+    # ------------------------------------------------------------- analysis
+    def start_analysis(self, sid: str, depth: int = 3) -> dict:
+        s = self.get(sid)
+        job = self.analyses.get(sid)
+        if job and job["status"] == "running":
+            return job
+        game = s.to_game()
+        job = {"status": "running", "progress": 0.0, "result": None, "plies": len(game.moves)}
+        self.analyses[sid] = job
+
+        def run() -> None:
+            from ..agents.base import SearchLimits
+            from ..agents.minimax import AlphaBetaAgent
+
+            try:
+                scorer = AlphaBetaAgent(depth=depth, seed=0, name="analysis")
+                a = analyse_game(game, scorer, SearchLimits(time=1.5),
+                                 progress=lambda i, n: job.update(progress=i / max(n, 1)))
+                annotate_game(game, a)
+                job["result"] = {**a.to_dict(), "svg": eval_graph_svg(a, dark=True), "pgn": game.to_pgn()}
+                job["status"] = "done"
+            except Exception as e:  # noqa: BLE001
+                job["status"], job["error"] = "error", str(e)
+
+        threading.Thread(target=run, daemon=True).start()
+        return job
 
     # -------------------------------------------------------------- actions
     def move(self, sid: str, uci: str) -> dict:
@@ -146,6 +186,11 @@ class Hub:
         out.update(extra)
         self._maybe_ai(sid)
         return out
+
+
+def _opening(board) -> list[str] | None:
+    hit = default_book().identify(board)
+    return list(hit) if hit else None
 
 
 def make_handler(hub: Hub):
@@ -193,6 +238,12 @@ def make_handler(hub: Hub):
                     return self._text(hub.get(sid).to_game().to_pgn(), "application/x-chess-pgn")
                 if method == "POST" and path == "/api/move":
                     return self._json(hub.move(sid, self._body()["uci"]))
+                if method == "POST" and path == "/api/analysis/start":
+                    job = hub.start_analysis(sid)
+                    return self._json({k: v for k, v in job.items() if k != "result"})
+                if method == "GET" and path == "/api/analysis":
+                    job = hub.analyses.get(sid)
+                    return self._json(job or {"status": "none"})
                 if method == "POST" and path.startswith("/api/action/"):
                     return self._json(hub.action(sid, path.rsplit("/", 1)[1]))
                 for name, fn in EXTRA_ROUTES.items():

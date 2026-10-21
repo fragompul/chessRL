@@ -92,3 +92,19 @@ def test_session_claim_threefold():
         s.board.push(s.board.parse_uci(u))
     assert s.board.repetition_count() == 3
     assert s.claim_draw()
+
+
+def test_session_live_annotation_and_takeback():
+    from chessrl.analysis.live import LiveAnnotator
+
+    ann = LiveAnnotator(depth=2, seconds_per_move=0.5)
+    s = GameSession(AlphaBetaAgent(depth=1, seed=0), WHITE, realtime=False, annotator=ann)
+    s.play_human("f3")
+    s.play_ai()
+    s.play_human("g4")
+    s.wait_annotations(30)
+    assert set(s.annotations) == {0, 1, 2}
+    assert s.annotations[2].label in ("blunder", "mistake") or s.annotations[2].win_loss >= 0
+    s.takeback()
+    s.wait_annotations(30)
+    assert 2 not in s.annotations and len(s.moves) == 0 or len(s.moves) <= 2

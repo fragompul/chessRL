@@ -37,3 +37,6 @@ ignore = ["B905"]
 
 [tool.setuptools.package-data]
 chessrl = ["web/static/*"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/chessrl/eval/plots.py" = ["E501"]

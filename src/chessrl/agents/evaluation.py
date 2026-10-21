@@ -95,34 +95,33 @@ _B = {t: _by_square(tab, False) for t, tab in _PST.items()}
 _W_KING_END, _B_KING_END = _by_square(_KING_END, True), _by_square(_KING_END, False)
 
 
+# Combined material + PST per (piece + 6, square), white pieces positive, black negative.
+_TABLE = [[0] * 64 for _ in range(13)]
+for _t in (PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING):
+    for _sq in range(64):
+        _TABLE[_t + 6][_sq] = PIECE_VALUES[_t] + _W[_t][_sq]
+        _TABLE[6 - _t][_sq] = -(PIECE_VALUES[_t] + _B[_t][_sq])
+
+
 def evaluate(board: Board) -> int:
     """Static score in centipawns from the side-to-move's point of view."""
-    white = black = 0
-    minors = 0
-    queens = 0
-    total_non_king = 0
-    for p in board.squares:
-        if not p:
-            continue
-        t = abs(p)
-        if t != KING:
-            total_non_king += 1
-        if t == QUEEN:
-            queens += 1
-        elif t in (KNIGHT, BISHOP):
-            minors += 1
-    if total_non_king <= 3 and board.is_insufficient_material():
-        return 0
-    endgame = queens == 0 or (minors <= 2 and total_non_king <= 8)
+    table = _TABLE
+    score = 0
+    minors = queens = total = 0
     for sq, p in enumerate(board.squares):
-        if not p:
-            continue
-        t = abs(p)
-        if p > 0:
-            pst = _W_KING_END if (t == KING and endgame) else _W[t]
-            white += PIECE_VALUES[t] + pst[sq]
-        else:
-            pst = _B_KING_END if (t == KING and endgame) else _B[t]
-            black += PIECE_VALUES[t] + pst[sq]
-    score = white - black
+        if p:
+            score += table[p + 6][sq]
+            t = p if p > 0 else -p
+            if t != KING:
+                total += 1
+                if t == QUEEN:
+                    queens += 1
+                elif t == KNIGHT or t == BISHOP:
+                    minors += 1
+    if total <= 3 and board.is_insufficient_material():
+        return 0
+    if queens == 0 or (minors <= 2 and total <= 8):
+        # Endgame: swap the king's middlegame table for the endgame one.
+        wk, bk = board.king_sq
+        score += (_W_KING_END[wk] - _W[KING][wk]) - (_B_KING_END[bk] - _B[KING][bk])
     return score if board.turn == 0 else -score

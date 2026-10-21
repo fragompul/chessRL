@@ -43,6 +43,16 @@
            font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "Apple Symbols", serif; }
   .piece.w { color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000, 0 1px 3px #000; }
   .piece.b { color: #111; text-shadow: 0 0 1px #fff; }
+  .boardrow { display: flex; gap: 8px; align-items: stretch; }
+  .boardrow #board { flex: 1; }
+  #evalbar { width: 18px; background: #2a2f38; border-radius: 4px; position: relative; overflow: hidden; }
+  #evalfill { position: absolute; left: 0; right: 0; background: #eceff3; transition: height .4s; }
+  #evaltxt { position: absolute; left: 0; right: 0; font-size: 9px; text-align: center; color: #888; }
+  #opening { color: var(--accent); font-size: 13px; min-height: 1.3em; margin-bottom: 6px; }
+  #analysis .acc { display: flex; gap: 14px; margin: 6px 0; font-size: 14px; }
+  #analysis svg { width: 100%; height: auto; border-radius: 6px; margin-top: 6px; }
+  #analysis .crit { font-size: 13px; color: var(--muted); margin: 2px 0; }
+  .sym { font-weight: 700; } .sym.bad { color: var(--bad); } .sym.good { color: var(--good); }
   #ghost { position: fixed; z-index: 50; pointer-events: none; display: none; transform: translate(-50%, -50%); }
   .side { width: min(92vw, 340px); display: flex; flex-direction: column; gap: 12px; }
   .card { background: var(--panel); border-radius: 10px; padding: 12px 14px; }
@@ -73,7 +83,7 @@
 <main>
   <div class="boardwrap">
     <div class="player" id="topPlayer"><span class="name" id="topName">–</span><span class="clock" id="topClock">--:--</span></div>
-    <div id="board"></div>
+    <div class="boardrow"><div id="evalbar" title="Evaluation (needs live annotation)"><div id="evalfill"></div><span id="evaltxt"></span></div><div id="board"></div></div>
     <div class="player" id="botPlayer"><span class="name" id="botName">–</span><span class="clock" id="botClock">--:--</span></div>
     <div id="thinking"></div>
   </div>
@@ -91,6 +101,7 @@
         <option value="30+0">Classical 30+0</option></select>
       <label><input type="checkbox" id="optRealtime" checked> Realistic thinking time</label>
       <label><input type="checkbox" id="optTakebacks" checked> Allow takebacks</label>
+      <label><input type="checkbox" id="optLive"> Live annotation (eval bar, ?! ?? marks)</label>
       <div class="row" style="margin-top:10px"><button class="primary" id="btnNew">Start</button></div>
     </div>
     <div class="card">
@@ -102,9 +113,11 @@
         <button id="btnFlip">Flip</button>
       </div>
     </div>
-    <div class="card"><h3>Moves</h3><div id="moves"></div>
-      <div class="row" style="margin-top:8px"><button id="btnPgn">Copy PGN</button><button id="btnFen">Copy FEN</button></div>
+    <div class="card"><h3>Moves</h3><div id="opening"></div><div id="moves"></div>
+      <div class="row" style="margin-top:8px"><button id="btnPgn">Copy PGN</button><button id="btnFen">Copy FEN</button>
+        <button id="btnAnalyze">Analyze game</button></div>
     </div>
+    <div class="card" id="analysis" style="display:none"><h3>Analysis</h3><div id="analysisBody"></div></div>
   </div>
 </main>
 <div id="ghost" class="piece"></div>
@@ -167,10 +180,14 @@ function render() {
   setClock($("botClock"), bottomIsWhite ? "white" : "black"); setClock($("topClock"), bottomIsWhite ? "black" : "white");
   $("status").textContent = S.status + (S.error ? " — " + S.error : "");
   $("thinking").textContent = S.thinking ? (S.opponent || "AI") + " is thinking…" : "";
+  $("opening").textContent = S.opening ? S.opening[0] + " · " + S.opening[1] : "";
+  renderEval();
   const mv = $("moves"); mv.innerHTML = "";
   S.moves.forEach((san, i) => {
     if (i % 2 === 0) { const n = document.createElement("span"); n.className = "n"; n.textContent = (i / 2 + 1) + "."; mv.appendChild(n); }
     const m = document.createElement("span"); m.className = "m" + (i === S.moves.length - 1 ? " cur" : ""); m.textContent = san;
+    const an = S.annotations && S.annotations[i];
+    if (an && an.symbol) { const y = document.createElement("span"); y.className = "sym " + (an.symbol.includes("?") ? "bad" : "good"); y.textContent = an.symbol; m.appendChild(y); }
     if (S.comments[i]) m.title = S.comments[i];
     mv.appendChild(m);
   });
@@ -178,6 +195,17 @@ function render() {
   const myTurn = !S.over && S.human === S.turn;
   $("btnTake").disabled = S.over || !S.human || !S.moves.length; $("btnHint").disabled = !myTurn;
   $("btnDraw").disabled = S.over || !S.human; $("btnResign").disabled = S.over || !S.human;
+}
+function renderEval() {
+  const bar = $("evalbar"), fill = $("evalfill"), txt = $("evaltxt");
+  if (!S || S.live_eval == null) { fill.style.height = "50%"; txt.textContent = ""; fill.style.bottom = "0"; fill.style.top = "auto"; return; }
+  const cp = Math.max(-1000, Math.min(1000, S.live_eval));
+  const win = 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * cp)) - 1);
+  const blackBottom = (S.human === "black") !== flipped;
+  fill.style.height = (blackBottom ? 100 - win : win) + "%";
+  fill.style.bottom = "0"; fill.style.top = "auto";
+  fill.style.background = blackBottom ? "#14171c" : "#eceff3"; bar.style.background = blackBottom ? "#eceff3" : "#2a2f38";
+  txt.textContent = Math.abs(S.live_eval) >= 9000 ? "M" : (S.live_eval / 100).toFixed(1); txt.style.top = "2px";
 }
 function nameSuffix(color) { if (!S) return ""; if (S.human === color) return " (you)"; if (S.human && S.opponent) return " · " + S.opponent; return ""; }
 
@@ -232,7 +260,7 @@ window.addEventListener("pointerup", (ev) => {
 
 async function newGame() {
   const body = {color: $("optColor").value, opponent: $("optOpp").value, tc: $("optTc").value || null,
-                realtime: $("optRealtime").checked, takebacks: $("optTakebacks").checked};
+                realtime: $("optRealtime").checked, takebacks: $("optTakebacks").checked, live_annotation: $("optLive").checked};
   flipped = false; S = null; setState(await api("/api/new", body));
 }
 async function action(name) {
@@ -241,6 +269,21 @@ async function action(name) {
   if (name === "draw" && !r.accepted) r.status = "Draw declined";
   setState(r);
 }
+async function analyze() {
+  if (!S) return; $("analysis").style.display = "block"; $("analysisBody").textContent = "Analyzing…";
+  await api(withSid("/api/analysis/start"), {});
+  const poll = async () => {
+    const j = await api(withSid("/api/analysis"));
+    if (j.status === "running") { $("analysisBody").textContent = "Analyzing… " + Math.round(j.progress * 100) + "%"; return setTimeout(poll, 700); }
+    if (j.status !== "done") { $("analysisBody").textContent = j.error || "No analysis"; return; }
+    const r = j.result, c = r.counts, fmt = (o) => Object.entries(o).filter(([k]) => k !== "book").map(([k, v]) => v + " " + k).join(", ");
+    $("analysisBody").innerHTML = `<div class="acc"><span>White accuracy <b>${r.accuracy.white}%</b></span><span>Black <b>${r.accuracy.black}%</b></span></div>
+      <div class="small">White: ${fmt(c.white)}<br>Black: ${fmt(c.black)}</div>` +
+      r.critical.map((p) => { const m = r.moves[p]; return `<div class="crit">${Math.floor(p / 2) + 1}${p % 2 ? "..." : "."} ${m.san}${m.symbol} — best ${m.best_san}</div>`; }).join("") + r.svg;
+  };
+  poll();
+}
+$("btnAnalyze").onclick = analyze;
 $("btnNew").onclick = newGame;
 $("btnTake").onclick = () => action("takeback"); $("btnHint").onclick = () => action("hint");
 $("btnDraw").onclick = () => action("draw"); $("btnResign").onclick = () => { if (S && !S.over) action("resign"); };
@@ -250,7 +293,10 @@ $("btnFen").onclick = () => { if (S) { navigator.clipboard.writeText(S.fen); $("
 
 (async () => {
   const opps = await api("/api/opponents");
-  $("optOpp").innerHTML = opps.map((o) => `<option value="${o.id}"${o.id === "ab2" ? " selected" : ""}>${o.label}${o.elo ? " (~" + o.elo + ")" : ""}</option>`).join("");
+  const groups = {};
+  opps.forEach((o) => (groups[o.group || "Engines"] = groups[o.group || "Engines"] || []).push(o));
+  $("optOpp").innerHTML = Object.entries(groups).map(([g, list]) => `<optgroup label="${g}">` + list.map((o) =>
+    `<option value="${o.id}"${o.id === "level:Club" ? " selected" : ""}>${o.label}</option>`).join("") + "</optgroup>").join("");
 })();
 </script>
 </body>

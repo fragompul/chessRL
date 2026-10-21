@@ -331,14 +331,54 @@ class Board:
             if not any(self.is_attacked(s, them) for s in q_safe):
                 moves.append(Move(home, q_to))
 
+    def _pinned_squares(self, ksq: int, us: int) -> set[int]:
+        """Squares of our pieces that are pinned to our king."""
+        sqs = self.squares
+        sign = 1 if us == WHITE else -1
+        pinned: set[int] = set()
+        for rays, slider in ((DIAG_RAYS[ksq], BISHOP), (ORTHO_RAYS[ksq], ROOK)):
+            for ray in rays:
+                candidate = -1
+                for s in ray:
+                    v = sqs[s] * sign
+                    if v == 0:
+                        continue
+                    if candidate < 0:
+                        if v > 0:
+                            candidate = s
+                            continue
+                        break  # first piece on the ray is an enemy: nothing pinned here
+                    if v < 0 and (-v == slider or -v == QUEEN):
+                        pinned.add(candidate)
+                    break
+        return pinned
+
     def legal_moves(self) -> list[Move]:
+        """Legal moves. Only moves that can expose the king (king moves, evasions of a check,
+        pinned pieces, en passant) are verified by actually making them."""
         us, them = self.turn, 1 - self.turn
+        ksq = self.king_sq[us]
+        sqs = self.squares
+        in_check = self.is_attacked(ksq, them)
+        pinned = self._pinned_squares(ksq, us)
+        ep = self.ep_square
         legal = []
         for m in self.pseudo_legal_moves():
-            self.push(m)
-            if not self.is_attacked(self.king_sq[us], them):
+            frm = m.from_sq
+            risky = (
+                in_check
+                or frm == ksq
+                or frm in pinned
+                or (ep is not None and m.to_sq == ep and abs(sqs[frm]) == PAWN)
+            )
+            if risky:
+                self.push(m)
+                ok = not self.is_attacked(self.king_sq[us], them)
+                self.pop()
+                if ok:
+                    legal.append(m)
+            else:
                 legal.append(m)
-            self.pop()
         return legal
 
     def is_legal(self, move: Move) -> bool:

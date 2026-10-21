@@ -35,22 +35,22 @@ Status legend: ✅ done · 🚧 in progress · ⬜ planned. Every idea that come
 - [x] Experiment tracking: JSONL metrics + `chessrl status`, JSON configs with presets (TensorBoard/W&B left as an idea, TRK-1)
 - [x] Colab notebook for longer GPU runs
 
-## Phase 5 — Evaluation & Elo ⬜
-- [ ] Match runner, SPRT-style significance, Elo estimation (BayesElo / Ordo-like)
-- [ ] Calibration against Stockfish with `UCI_LimitStrength` / `UCI_Elo`
-- [ ] Checkpoint-vs-checkpoint ladder and Elo-vs-training-steps curve
+## Phase 5 — Evaluation & Elo ✅
+- [x] Match runner (fair openings, colour swap), SPRT, MLE rating estimation with anchors
+- [x] Calibration against Stockfish with `UCI_LimitStrength` / `UCI_Elo` (UCI wrapper works with any engine)
+- [x] Snapshot ladder vs anchor agents → `elo.json` + `elo.svg` (Elo-vs-iteration curve); CLI: `arena`, `elo`, `ladder`
 
-## Phase 6 — Difficulty levels & human-likeness ⬜
-- [ ] Levels by checkpoint, MCTS simulations and temperature; each calibrated to a target Elo
-- [ ] Human-like errors (more mistakes in complex positions / low time)
-- [ ] Realistic thinking time model (depends on Elo, position complexity, clock)
-- [ ] Opening book scaled by level
+## Phase 6 — Difficulty levels & human-likeness ✅
+- [x] Levels by checkpoint, MCTS simulations and temperature; each calibrated to a target Elo
+- [x] Human-like errors (more mistakes in complex positions / low time)
+- [x] Realistic thinking time model (depends on Elo, position complexity, clock)
+- [x] Opening book scaled by level
 
-## Phase 7 — Full game experience ⬜
-- [ ] Clocks: blitz / rapid / classical, increment, time odds
-- [ ] Game options: colour choice, takebacks, hints, resign / draw offers
-- [ ] Automatic annotation while playing (eval swings, !? / ?? tags, comments in PGN)
-- [ ] Post-game analysis: accuracy %, eval graph, critical moments
+## Phase 7 — Full game experience ✅
+- [x] Clocks: blitz / rapid / classical, increment, time odds
+- [x] Game options: colour choice, takebacks, hints, resign / draw offers
+- [x] Automatic annotation while playing (eval swings, !? / ?? tags, comments in PGN)
+- [x] Post-game analysis: accuracy %, eval graph, critical moments
 
 ## Phase 8 — Real-board vision ⬜
 - [ ] Board detection + homography (4 corners), square grid

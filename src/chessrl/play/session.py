@@ -9,6 +9,7 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from ..agents.base import Agent, SearchLimits
@@ -30,12 +31,13 @@ class GameSession:
         human_color: int | None = WHITE,
         time_control: TimeControl | None = None,
         *,
-        think_time: Callable[[Board, float], float] | None = None,
+        think_time: Callable[[Board, float | None, float], float] | None = None,
         realtime: bool = True,
         start_fen: str = STARTING_FEN,
         allow_takebacks: bool = True,
         hint_agent: Agent | None = None,
         headers: dict[str, str] | None = None,
+        annotator=None,
         now: Callable[[], float] = time.monotonic,
     ):
         """`human_color=None` means the AI plays both sides (watch mode)."""
@@ -56,6 +58,10 @@ class GameSession:
         self._clock_snaps: list[dict[int, float]] = []
         self._lock = threading.RLock()
         self._now = now
+        self.annotator = annotator
+        self.annotations: dict[int, object] = {}
+        self._pool: ThreadPoolExecutor | None = None
+        self._pending: list = []
         if self.clock:
             self.clock.start(self.board.turn)
 
@@ -99,9 +105,11 @@ class GameSession:
         move = self.ai.select_move(board, limits)
         spent = self._now() - started
         delay = 0.0
-        if self.think_time:
+        think = self.think_time or getattr(self.ai, "think_seconds", None)
+        if think:
             left = self.time_left(color)
-            delay = max(0.0, self.think_time(board, left if left is not None else 1e9) - spent)
+            inc = self.clock.tc.increment if self.clock else 0.0
+            delay = max(0.0, think(board, left, inc) - spent)
             if left is not None:
                 delay = min(delay, max(0.0, left - spent - 0.05))
         if self.realtime and delay > 0:
@@ -127,11 +135,36 @@ class GameSession:
             self._clock_snaps.append(self.clock.snapshot())
             self.clock.press(color)
         self.draw_offered_by = None
+        if self.annotator is not None:
+            self._submit_annotation(self.board.copy(), move, len(self.moves))
         self.moves.append(move)
         self.board.push(move)
         outcome = self.board.outcome()
         if outcome:
             self._end(outcome.result, outcome.termination.value)
+
+    # ------------------------------------------------------- live annotation
+    def _submit_annotation(self, board_before: Board, move: Move, ply: int) -> None:
+        if self._pool is None:
+            self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="annotator")
+
+        def work() -> None:
+            from ..analysis.annotate import comment_for
+
+            result = self.annotator.annotate(board_before, move, ply)
+            with self._lock:
+                if ply < len(self.moves) and self.moves[ply] == move:  # not taken back meanwhile
+                    self.annotations[ply] = result
+                    text = comment_for(result)
+                    if text:
+                        self.comments[ply] = text
+
+        self._pending.append(self._pool.submit(work))
+
+    def wait_annotations(self, timeout: float | None = None) -> None:
+        for f in list(self._pending):
+            f.result(timeout)
+        self._pending.clear()
 
     def _end(self, result: str, reason: str) -> None:
         self.ending = Ending(result, reason)
@@ -209,6 +242,7 @@ class GameSession:
                 self.moves.pop()
                 snap = self._clock_snaps.pop() if self._clock_snaps else None
                 self.comments.pop(len(self.moves), None)
+                self.annotations.pop(len(self.moves), None)
                 undone += 1
                 if self.board.turn == self.human_color:
                     if snap and self.clock:

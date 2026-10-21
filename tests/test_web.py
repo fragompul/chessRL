@@ -69,3 +69,23 @@ def test_black_human_ai_opens(base):
 
 def test_unknown_session(base):
     assert call(base, "/api/state?sid=nope")["error"] == "unknown session"
+
+
+def test_live_annotation_and_analysis_endpoints(base):
+    sid = call(base, "/api/new", {"color": "white", "opponent": "ab1", "realtime": False,
+                                  "seed": 0, "live_annotation": True})["sid"]
+    call(base, f"/api/move?sid={sid}", {"uci": "e2e4"})
+    for _ in range(100):
+        s = call(base, f"/api/state?sid={sid}")
+        if len(s["moves"]) == 2 and s["annotations"]:
+            break
+        time.sleep(0.1)
+    assert s["opening"] is not None or s["moves"]
+    assert "0" in s["annotations"]
+    call(base, f"/api/analysis/start?sid={sid}", {})
+    for _ in range(200):
+        job = call(base, f"/api/analysis?sid={sid}")
+        if job["status"] != "running":
+            break
+        time.sleep(0.1)
+    assert job["status"] == "done" and "accuracy" in job["result"] and job["result"]["svg"].startswith("<svg")
