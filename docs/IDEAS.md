@@ -57,7 +57,7 @@ right section with the next free ID. Status: `idea` â†’ `planned` (in ROADMAP) â
 | UI-5 | Interpretability view: value heatmap, policy arrows, attention maps (ties to `see-inside-ml`) | done |
 | UI-6 | Voice: announce moves with TTS; voice input for moves | idea |
 | UI-7 | In-browser play via ONNX Runtime Web (no server) | done |
-| UI-8 | Lichess bot account running the agent at a chosen level | idea |
+| UI-8 | Lichess bot account running the agent at a chosen level | documented (untested without an account); see INTEGRATIONS.md |
 | UI-9 | Opening explorer / "which opening am I in" tagging (ECO) | done |
 
 ## Vision (real board)

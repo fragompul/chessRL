@@ -42,6 +42,7 @@ def register(sub: argparse._SubParsersAction) -> None:  # noqa: SLF001
     register_analysis(sub)
     register_vision(sub)
     register_export(sub)
+    register_uci(sub)
 
 
 def _cmd_status(args: argparse.Namespace) -> int:
@@ -336,3 +337,19 @@ def register_export(sub: argparse._SubParsersAction) -> None:  # noqa: SLF001
     e.add_argument("--checkpoint", required=True)
     e.add_argument("--out", default="model.onnx")
     e.set_defaults(func=_cmd_export)
+
+
+def _cmd_uci(args: argparse.Namespace) -> int:
+    from .uci_server import run_uci
+
+    agent = _agent(args.agent, seed=args.seed)
+    run_uci(agent, realtime=args.realtime)
+    return 0
+
+
+def register_uci(sub: argparse._SubParsersAction) -> None:  # noqa: SLF001
+    u = sub.add_parser("uci", help="run an agent as a UCI engine (Arena, Cute Chess, lichess-bot)")
+    u.add_argument("--agent", required=True, help="e.g. level:1400, ab3, ckpt:path@200")
+    u.add_argument("--seed", type=int, default=None)
+    u.add_argument("--realtime", action="store_true", help="wait like a human (humanised levels)")
+    u.set_defaults(func=_cmd_uci)

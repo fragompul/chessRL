@@ -38,6 +38,7 @@ python -m chessrl serve                      # web UI at http://127.0.0.1:8000
 python -m chessrl play --opponent level:Club # terminal game
 python -m chessrl arena --a ab3 --b level:1400 --games 10
 python -m chessrl analyse game.pgn --out annotated.pgn
+python -m chessrl uci --agent level:1400     # use any agent in Arena / Cute Chess / lichess-bot
 python -m chessrl vision-demo --rotate       # camera pipeline on a synthetic video
 
 # train in resumable sessions (see docs/TRAINING.md)
@@ -67,7 +68,7 @@ node docs/demo/test/test.js   # JS port vs Python (after `npm ci` in docs/demo/t
 
 * [Roadmap](docs/ROADMAP.md) — phases and status · [Ideas backlog](docs/IDEAS.md) — every idea, tracked
 * [Decision log](docs/DECISIONS.md) — why things are the way they are
-* [Training guide](docs/TRAINING.md) · [Evaluation & Elo](docs/EVALUATION.md) · [Vision](docs/VISION.md)
+* [Training guide](docs/TRAINING.md) · [Evaluation & Elo](docs/EVALUATION.md) · [Vision](docs/VISION.md) · [Integrations (UCI, Lichess, browser)](docs/INTEGRATIONS.md)
 * [Technical report (draft)](docs/REPORT.md) · [Model card template](docs/MODEL_CARD.md)
 
 ## Honest notes

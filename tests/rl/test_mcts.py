@@ -119,3 +119,63 @@ def test_selfplay_never_stalls_on_repetition_prone_endgames():
                              max_plies=80, endgames=["KRK", "KQK"], endgame_prob=1.0)
         games = SelfPlayEngine(cfg, tiny_eval(), seed=seed).run(3)
         assert len(games) == 3
+
+
+def test_selfplay_value_targets_have_the_right_sign():
+    """z must be +1 for positions where the side to move went on to win and -1 where it lost;
+    a flipped sign here would make every training run silently learn the wrong thing."""
+    from chessrl.engine import WHITE
+
+    # material adjudication at the move limit guarantees decisive games without a strong network
+    cfg = SelfPlayConfig(parallel=4, search=SearchConfig(sims=6, leaves_per_round=2), max_plies=40,
+                         endgames=["KQK", "KRK"], endgame_prob=1.0, adjudicate_material=3.0)
+    games = SelfPlayEngine(cfg, tiny_eval(), seed=5).run(8)
+    decisive = [g for g in games if g.result != "1/2-1/2"]
+    assert decisive, "need at least one decisive game for this check"
+    for g in decisive:
+        board = Board(g.game.start_fen)
+        movers = []
+        for m in g.game.moves:
+            movers.append(board.turn)
+            board.push(m)
+        white_won = g.result == "1-0"
+        expected = [1.0 if (mv == WHITE) == white_won else -1.0 for mv in movers]
+        assert g.z.tolist() == expected
+
+
+def test_gradient_steps_reduce_loss_on_a_fixed_batch():
+    """Optimiser wiring check (not a training run): overfitting one small batch must work."""
+    import torch
+
+    from chessrl.rl.train import policy_value_loss
+
+    cfg = SelfPlayConfig(parallel=2, search=SearchConfig(sims=6), max_plies=30)
+    games = SelfPlayEngine(cfg, tiny_eval(), seed=9).run(2)
+    buf = ReplayBuffer(200)
+    for g in games:
+        buf.add(g.pieces, g.meta, g.pol_idx, g.pol_p, g.z)
+    batch = buf.sample(min(32, len(buf)), np.random.default_rng(0), augment=False)
+    net = ChessNet(NetConfig(channels=16, blocks=1, value_hidden=16))
+    opt = torch.optim.AdamW(net.parameters(), lr=3e-3)
+    first = last = None
+    for step in range(60):
+        loss, _, _ = policy_value_loss(net, batch, "cpu")
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+        first = float(loss) if step == 0 else first
+        last = float(loss)
+    assert last < 0.7 * first
+
+
+def test_league_games_record_only_the_learners_moves():
+    opp = tiny_eval()
+    cfg = SelfPlayConfig(parallel=3, search=SearchConfig(sims=6, leaves_per_round=2), max_plies=30,
+                         league_prob=1.0)
+    games = SelfPlayEngine(cfg, tiny_eval(), opponents=[("snap1", opp)], seed=4).run(3)
+    assert len(games) == 3
+    for g in games:
+        assert g.opponent == "snap1"
+        # roughly half of the plies belong to the learner: positions recorded < plies
+        assert 0 < len(g.z) <= g.plies // 2 + 1
+        assert "snap1" in (g.game.headers["White"], g.game.headers["Black"])

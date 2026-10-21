@@ -13,7 +13,7 @@
     "style": "balanced",
     "error_scale": 0.375,
     "acpl": 149.3,
-    "measured_elo": null
+    "measured_elo": 721
   },
   {
     "name": "Casual",
@@ -29,7 +29,7 @@
     "style": "balanced",
     "error_scale": 0.37,
     "acpl": 123.8,
-    "measured_elo": null
+    "measured_elo": 721
   },
   {
     "name": "Novice",
