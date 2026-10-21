@@ -25,8 +25,11 @@ testpaths = ["tests"]
 markers = ["slow: long-running tests (deselect with -m 'not slow')"]
 
 [tool.ruff]
-line-length = 100
+line-length = 110
 src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.setuptools.package-data]
+chessrl = ["web/static/*"]

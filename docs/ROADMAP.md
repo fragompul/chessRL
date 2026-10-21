@@ -16,10 +16,10 @@ Status legend: ✅ done · 🚧 in progress · ⬜ planned. Every idea that come
 - [x] Validation: perft on 6 reference positions (+ depth-4 slow tests) and a differential
       test against python-chess over random games (legal moves, FEN, SAN, status, hashes)
 
-## Phase 2 — Playable game ⬜
-- [ ] Baseline agents: random, greedy-material, minimax/alpha-beta (also useful as Elo anchors)
-- [ ] CLI play (human vs agent, agent vs agent)
-- [ ] Web UI (board, drag & drop, move list, flip board, FEN/PGN import/export)
+## Phase 2 — Playable game ✅
+- [x] Baseline agents: random, greedy-material, minimax/alpha-beta (also useful as Elo anchors)
+- [x] CLI play (human vs agent, agent vs agent)
+- [x] Web UI (board, drag & drop, promotion picker, clocks, move list, flip, PGN/FEN copy)
 
 ## Phase 3 — RL environment ⬜
 - [ ] Board → tensor encoding (piece planes + castling / ep / repetition / move-count planes)

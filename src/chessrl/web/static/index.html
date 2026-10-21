@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>chessRL</title>
+<style>
+  :root {
+    --bg: #14171c; --panel: #1d2128; --panel2: #262b34; --text: #e6e8ec; --muted: #8b93a1;
+    --accent: #4aaec0; --light: #ead9b6; --dark: #b08462; --sel: rgba(74,174,192,.55);
+    --last: rgba(255,214,102,.45); --check: rgba(235,64,52,.65); --hint: rgba(120,220,140,.6);
+    --good: #7bd88f; --bad: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 14px 20px; display: flex; align-items: baseline; gap: 12px; border-bottom: 1px solid #2a2f38; }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: .3px; }
+  header span { color: var(--muted); font-size: 13px; }
+  main { display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; justify-content: center; align-items: flex-start; }
+  .boardwrap { width: min(92vw, 640px); }
+  .player { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px;
+            background: var(--panel); border-radius: 8px; margin: 6px 0; }
+  .player .name { font-weight: 600; }
+  .clock { font: 600 20px ui-monospace, Menlo, monospace; padding: 2px 10px; border-radius: 6px; background: var(--panel2); }
+  .clock.active { background: var(--accent); color: #031418; }
+  .clock.low { color: var(--bad); }
+  #board { position: relative; display: grid; grid-template-columns: repeat(8, 1fr);
+           grid-template-rows: repeat(8, 1fr); aspect-ratio: 1;
+           border-radius: 6px; overflow: hidden; user-select: none; touch-action: none; }
+  .sq { position: relative; min-width: 0; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .sq.light { background: var(--light); } .sq.dark { background: var(--dark); }
+  .sq.last::before, .sq.sel::before, .sq.chk::before, .sq.hint::before { content: ""; position: absolute; inset: 0; }
+  .sq.last::before { background: var(--last); } .sq.sel::before { background: var(--sel); }
+  .sq.chk::before { background: radial-gradient(circle, var(--check), transparent 75%); }
+  .sq.hint::before { background: var(--hint); }
+  .sq .dot { position: absolute; width: 28%; height: 28%; border-radius: 50%; background: rgba(20,30,40,.35); pointer-events: none; }
+  .sq .ring { position: absolute; inset: 4%; border-radius: 50%; border: 5px solid rgba(20,30,40,.35); pointer-events: none; }
+  .sq .coord { position: absolute; font-size: 11px; font-weight: 600; opacity: .7; pointer-events: none; }
+  .sq.light .coord { color: var(--dark); } .sq.dark .coord { color: var(--light); }
+  .coord.f { right: 3px; bottom: 1px; } .coord.r { left: 3px; top: 1px; }
+  .piece { font-size: min(8.2vw, 52px); line-height: 1; z-index: 2; pointer-events: none;
+           font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "Apple Symbols", serif; }
+  .piece.w { color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000, 0 1px 3px #000; }
+  .piece.b { color: #111; text-shadow: 0 0 1px #fff; }
+  #ghost { position: fixed; z-index: 50; pointer-events: none; display: none; transform: translate(-50%, -50%); }
+  .side { width: min(92vw, 340px); display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--panel); border-radius: 10px; padding: 12px 14px; }
+  .card h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
+  select, input[type=text] { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid #343b47;
+                             border-radius: 6px; padding: 7px 8px; font: inherit; }
+  button { background: var(--panel2); color: var(--text); border: 1px solid #343b47; border-radius: 6px;
+           padding: 7px 12px; font: inherit; cursor: pointer; }
+  button:hover { border-color: var(--accent); } button.primary { background: var(--accent); color: #031418; border: 0; font-weight: 700; }
+  button:disabled { opacity: .4; cursor: default; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  #moves { max-height: 240px; overflow-y: auto; display: grid; grid-template-columns: 34px 1fr 1fr; gap: 2px 6px;
+           font: 14px ui-monospace, Menlo, monospace; }
+  #moves .n { color: var(--muted); } #moves .m { padding: 1px 4px; border-radius: 4px; }
+  #moves .m.cur { background: var(--accent); color: #031418; }
+  #status { font-weight: 600; } #thinking { color: var(--accent); min-height: 1.4em; font-size: 13px; }
+  #modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 60; }
+  #modal .card { width: min(92vw, 360px); }
+  .promo { display: flex; gap: 8px; justify-content: center; }
+  .promo button { font-size: 40px; padding: 4px 14px; }
+  .small { font-size: 12px; color: var(--muted); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header><h1>chessRL</h1><span>from-scratch engine · self-play RL</span></header>
+<main>
+  <div class="boardwrap">
+    <div class="player" id="topPlayer"><span class="name" id="topName">–</span><span class="clock" id="topClock">--:--</span></div>
+    <div id="board"></div>
+    <div class="player" id="botPlayer"><span class="name" id="botName">–</span><span class="clock" id="botClock">--:--</span></div>
+    <div id="thinking"></div>
+  </div>
+  <div class="side">
+    <div class="card" id="newCard">
+      <h3>New game</h3>
+      <label>Play as</label>
+      <select id="optColor"><option value="white">White</option><option value="black">Black</option>
+        <option value="random">Random</option><option value="none">Watch (AI vs AI)</option></select>
+      <label>Opponent</label><select id="optOpp"></select>
+      <label>Time control</label>
+      <select id="optTc"><option value="">No clock</option><option value="1+0">Bullet 1+0</option>
+        <option value="3+2" selected>Blitz 3+2</option><option value="5+0">Blitz 5+0</option>
+        <option value="10+0">Rapid 10+0</option><option value="15+10">Rapid 15+10</option>
+        <option value="30+0">Classical 30+0</option></select>
+      <label><input type="checkbox" id="optRealtime" checked> Realistic thinking time</label>
+      <label><input type="checkbox" id="optTakebacks" checked> Allow takebacks</label>
+      <div class="row" style="margin-top:10px"><button class="primary" id="btnNew">Start</button></div>
+    </div>
+    <div class="card">
+      <h3>Game</h3>
+      <div id="status">Press Start</div>
+      <div class="row" style="margin-top:8px">
+        <button id="btnTake">Takeback</button><button id="btnHint">Hint</button>
+        <button id="btnDraw">Offer draw</button><button id="btnResign">Resign</button>
+        <button id="btnFlip">Flip</button>
+      </div>
+    </div>
+    <div class="card"><h3>Moves</h3><div id="moves"></div>
+      <div class="row" style="margin-top:8px"><button id="btnPgn">Copy PGN</button><button id="btnFen">Copy FEN</button></div>
+    </div>
+  </div>
+</main>
+<div id="ghost" class="piece"></div>
+<div id="modal"><div class="card"><h3>Promote to</h3><div class="promo" id="promo"></div></div></div>
+
+<script>
+const GLYPH = {P:"♟",N:"♞",B:"♝",R:"♜",Q:"♛",K:"♚"};
+const $ = (id) => document.getElementById(id);
+let S = null, flipped = false, selected = null, hintMove = null, polling = null, busy = false;
+
+async function api(path, body) {
+  const opts = body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)};
+  const r = await fetch(path, opts); const j = await r.json();
+  if (!r.ok) throw new Error(j.error || r.statusText); return j;
+}
+const withSid = (p) => p + (p.includes("?") ? "&" : "?") + "sid=" + (S ? S.sid : "");
+
+function fenBoard(fen) {
+  const rows = fen.split(" ")[0].split("/"), out = {};
+  rows.forEach((row, i) => { let f = 0; for (const ch of row) {
+    if (/\d/.test(ch)) f += +ch; else { out[(7 - i) * 8 + f] = ch; f++; } } });
+  return out;
+}
+const sqName = (s) => "abcdefgh"[s % 8] + (Math.floor(s / 8) + 1);
+const sqNum = (n) => "abcdefgh".indexOf(n[0]) + 8 * (+n[1] - 1);
+
+function fmt(t) { if (t == null) return "--:--"; t = Math.max(0, t); const m = Math.floor(t / 60), s = t - m * 60;
+  return m + ":" + (t < 20 ? s.toFixed(1).padStart(4, "0") : String(Math.floor(s)).padStart(2, "0")); }
+
+function render() {
+  const boardEl = $("board"); boardEl.innerHTML = "";
+  if (!S) return;
+  const pieces = fenBoard(S.fen);
+  const orient = (S.human === "black") !== flipped;       // true => black at bottom
+  const lastFrom = S.last ? sqNum(S.last.slice(0, 2)) : -1, lastTo = S.last ? sqNum(S.last.slice(2, 4)) : -1;
+  const chkSq = S.check ? S.king_squares[S.turn] : -1;
+  const targets = selected != null ? (S.legal[sqName(selected)] || []).map((u) => sqNum(u.slice(2, 4))) : [];
+  for (let vr = 0; vr < 8; vr++) for (let vf = 0; vf < 8; vf++) {
+    const r = orient ? vr : 7 - vr, f = orient ? 7 - vf : vf, sq = r * 8 + f;
+    const d = document.createElement("div");
+    d.className = "sq " + ((r + f) % 2 === 0 ? "dark" : "light");
+    if (sq === lastFrom || sq === lastTo) d.classList.add("last");
+    if (sq === selected) d.classList.add("sel");
+    if (sq === chkSq) d.classList.add("chk");
+    if (hintMove && (sq === sqNum(hintMove.slice(0, 2)) || sq === sqNum(hintMove.slice(2, 4)))) d.classList.add("hint");
+    d.dataset.sq = sq;
+    if (vf === 0) { const c = document.createElement("span"); c.className = "coord r"; c.textContent = r + 1; d.appendChild(c); }
+    if (vr === 7) { const c = document.createElement("span"); c.className = "coord f"; c.textContent = "abcdefgh"[f]; d.appendChild(c); }
+    const p = pieces[sq];
+    if (p) { const e = document.createElement("span"); e.className = "piece " + (p === p.toUpperCase() ? "w" : "b");
+      e.textContent = GLYPH[p.toUpperCase()]; d.appendChild(e); }
+    if (targets.includes(sq)) { const t = document.createElement("span"); t.className = p ? "ring" : "dot"; d.appendChild(t); }
+    boardEl.appendChild(d);
+  }
+  const bottomIsWhite = !orient;
+  $("botName").textContent = (bottomIsWhite ? "White" : "Black") + nameSuffix(bottomIsWhite ? "white" : "black");
+  $("topName").textContent = (bottomIsWhite ? "Black" : "White") + nameSuffix(bottomIsWhite ? "black" : "white");
+  const setClock = (el, color) => { const t = S.clock ? S.clock[color] : null; el.textContent = fmt(t);
+    el.classList.toggle("active", !S.over && S.turn === color); el.classList.toggle("low", t != null && t < 20); };
+  setClock($("botClock"), bottomIsWhite ? "white" : "black"); setClock($("topClock"), bottomIsWhite ? "black" : "white");
+  $("status").textContent = S.status + (S.error ? " — " + S.error : "");
+  $("thinking").textContent = S.thinking ? (S.opponent || "AI") + " is thinking…" : "";
+  const mv = $("moves"); mv.innerHTML = "";
+  S.moves.forEach((san, i) => {
+    if (i % 2 === 0) { const n = document.createElement("span"); n.className = "n"; n.textContent = (i / 2 + 1) + "."; mv.appendChild(n); }
+    const m = document.createElement("span"); m.className = "m" + (i === S.moves.length - 1 ? " cur" : ""); m.textContent = san;
+    if (S.comments[i]) m.title = S.comments[i];
+    mv.appendChild(m);
+  });
+  mv.scrollTop = mv.scrollHeight;
+  const myTurn = !S.over && S.human === S.turn;
+  $("btnTake").disabled = S.over || !S.human || !S.moves.length; $("btnHint").disabled = !myTurn;
+  $("btnDraw").disabled = S.over || !S.human; $("btnResign").disabled = S.over || !S.human;
+}
+function nameSuffix(color) { if (!S) return ""; if (S.human === color) return " (you)"; if (S.human && S.opponent) return " · " + S.opponent; return ""; }
+
+function setState(s) { const changed = !S || s.fen !== S.fen; S = s; if (changed) { selected = null; hintMove = null; } render(); schedulePoll(); }
+function schedulePoll() {
+  clearTimeout(polling);
+  if (!S || S.over) return;
+  const fast = S.thinking || S.turn !== S.human || S.clock;
+  polling = setTimeout(async () => { try { setState(await api(withSid("/api/state"))); } catch (e) {} }, fast ? 250 : 1000);
+}
+
+async function tryMove(from, to) {
+  const opts = (S.legal[sqName(from)] || []).filter((u) => u.slice(2, 4) === sqName(to));
+  if (!opts.length || busy) return false;
+  let uci = opts[0];
+  if (opts.length > 1) uci = await choosePromotion(opts);
+  busy = true;
+  try { setState(await api(withSid("/api/move"), {uci})); } catch (e) { $("status").textContent = e.message; } finally { busy = false; }
+  return true;
+}
+function choosePromotion(opts) {
+  return new Promise((resolve) => {
+    const box = $("promo"); box.innerHTML = ""; const white = S.turn === "white";
+    for (const u of opts) { const b = document.createElement("button"); const t = {q:"Q",r:"R",b:"B",n:"N"}[u[4]];
+      b.textContent = GLYPH[t]; b.style.color = white ? "#fff" : "#111"; b.style.textShadow = white ? "0 0 2px #000" : "0 0 1px #fff";
+      b.onclick = () => { $("modal").style.display = "none"; resolve(u); }; box.appendChild(b); }
+    $("modal").style.display = "flex";
+  });
+}
+function canMoveFrom(sq) { return S && !S.over && S.human === S.turn && (S.legal[sqName(sq)] || []).length > 0; }
+
+const boardEl = $("board"), ghost = $("ghost");
+let drag = null;
+boardEl.addEventListener("pointerdown", (ev) => {
+  const el = ev.target.closest(".sq"); if (!el || !S) return; const sq = +el.dataset.sq;
+  if (selected != null && selected !== sq && (S.legal[sqName(selected)] || []).some((u) => u.slice(2, 4) === sqName(sq))) {
+    const from = selected; selected = null; tryMove(from, sq); return; }
+  if (canMoveFrom(sq)) { selected = sq; render();
+    const pe = el.querySelector(".piece");
+    if (pe) { drag = {sq, moved: false}; ghost.className = pe.className; ghost.textContent = pe.textContent;
+      ghost.style.fontSize = getComputedStyle(pe).fontSize; }
+  } else { selected = null; render(); }
+});
+window.addEventListener("pointermove", (ev) => {
+  if (!drag) return; drag.moved = true; ghost.style.display = "block"; ghost.style.left = ev.clientX + "px"; ghost.style.top = ev.clientY + "px"; });
+window.addEventListener("pointerup", (ev) => {
+  if (!drag) return; const d = drag; drag = null; ghost.style.display = "none";
+  if (!d.moved) return;
+  const el = document.elementFromPoint(ev.clientX, ev.clientY); const t = el && el.closest(".sq");
+  if (t && +t.dataset.sq !== d.sq) { selected = null; tryMove(d.sq, +t.dataset.sq).then((ok) => { if (!ok) { selected = d.sq; render(); } }); }
+});
+
+async function newGame() {
+  const body = {color: $("optColor").value, opponent: $("optOpp").value, tc: $("optTc").value || null,
+                realtime: $("optRealtime").checked, takebacks: $("optTakebacks").checked};
+  flipped = false; S = null; setState(await api("/api/new", body));
+}
+async function action(name) {
+  if (!S) return; const r = await api(withSid("/api/action/" + name), {});
+  if (name === "hint") { hintMove = r.hint; $("status").textContent = "Hint: " + (r.hint_san || "–"); const keep = S; S = r; render(); S = keep; return; }
+  if (name === "draw" && !r.accepted) r.status = "Draw declined";
+  setState(r);
+}
+$("btnNew").onclick = newGame;
+$("btnTake").onclick = () => action("takeback"); $("btnHint").onclick = () => action("hint");
+$("btnDraw").onclick = () => action("draw"); $("btnResign").onclick = () => { if (S && !S.over) action("resign"); };
+$("btnFlip").onclick = () => { flipped = !flipped; render(); };
+$("btnPgn").onclick = async () => { if (!S) return; const t = await (await fetch(withSid("/api/pgn"))).text(); navigator.clipboard.writeText(t); $("status").textContent = "PGN copied"; };
+$("btnFen").onclick = () => { if (S) { navigator.clipboard.writeText(S.fen); $("status").textContent = "FEN copied"; } };
+
+(async () => {
+  const opps = await api("/api/opponents");
+  $("optOpp").innerHTML = opps.map((o) => `<option value="${o.id}"${o.id === "ab2" ? " selected" : ""}>${o.label}${o.elo ? " (~" + o.elo + ")" : ""}</option>`).join("");
+})();
+</script>
+</body>
+</html>
