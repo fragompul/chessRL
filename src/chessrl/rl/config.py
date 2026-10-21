@@ -47,6 +47,7 @@ class TrainConfig:
     eval_games: int = 6
     eval_sims: int = 50
     eval_depth: int = 2
+    eval_baselines: list[str] = field(default_factory=lambda: ["random", "greedy", "ab1"])
 
     def to_dict(self) -> dict:
         return asdict(self)

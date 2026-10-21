@@ -205,20 +205,25 @@ class Trainer:
 
     # -------------------------------------------------------------- eval
     def evaluate(self) -> dict:
-        """Score the current network (MCTS) against an alpha-beta baseline."""
+        """Score the current network (MCTS) against baselines of increasing strength."""
         from ..agents import AlphaBetaAgent, MCTSAgent
+        from ..agents.registry import make_agent
         from ..play import play_game
 
         cfg = self.cfg
         agent = MCTSAgent(NetEvaluator(self.net, self.device), sims=cfg.eval_sims, name="net", seed=0)
-        base = AlphaBetaAgent(depth=cfg.eval_depth, seed=0)
-        score = 0.0
-        for i in range(cfg.eval_games):
-            white, black = (agent, base) if i % 2 == 0 else (base, agent)
-            r = play_game(white, black, max_plies=160)
-            score += r.score_for(white is agent)
-        return {"eval_vs": base.name, "eval_score": score / max(cfg.eval_games, 1),
-                "eval_games": cfg.eval_games}
+        opponents = [make_agent(n, seed=0) for n in cfg.eval_baselines]
+        opponents.append(AlphaBetaAgent(depth=cfg.eval_depth, seed=0))
+        out: dict = {"eval_games": cfg.eval_games}
+        for k, base in enumerate(opponents):
+            score = 0.0
+            for i in range(cfg.eval_games):
+                white, black = (agent, base) if i % 2 == 0 else (base, agent)
+                score += play_game(white, black, max_plies=160).score_for(white is agent)
+            out[f"eval_{base.name}"] = score / max(cfg.eval_games, 1)
+            if k == len(opponents) - 1:  # keep the historic keys for the strongest baseline
+                out["eval_vs"], out["eval_score"] = base.name, out[f"eval_{base.name}"]
+        return out
 
 
 def _with_league(cfg: TrainConfig, has_opponents: bool):
@@ -313,5 +318,7 @@ def _fmt(m: dict) -> str:
     parts.append(f"W/D/B {m.get('white_wins', 0)}/{m.get('draws', 0)}/{m.get('black_wins', 0)}")
     parts.append(f"{m['iter_seconds']:.0f}s")
     if "eval_score" in m:
-        parts.append(f"eval {m['eval_score']:.2f} vs {m['eval_vs']}")
+        extra = " ".join(f"{k[5:]}={v:.2f}" for k, v in m.items() if k.startswith("eval_") and k not in
+                         ("eval_score", "eval_vs", "eval_games"))
+        parts.append(f"eval {extra}")
     return " | ".join(parts)

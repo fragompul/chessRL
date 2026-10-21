@@ -30,7 +30,8 @@ args = ap.parse_args()
 
 baseline = json.loads((Path(__file__).parent.parent / "src/chessrl/agents/baseline_elo.json").read_text())
 anchor_elo = {k: float(v) for k, v in baseline["ratings"].items()}
-pool = {"random": "random", "greedy": "greedy", "alphabeta-d1": "ab1", "alphabeta-d2": "ab2", "alphabeta-d3": "ab3"}
+pool = {"random": "random", "greedy": "greedy", "alphabeta-d1": "ab1",
+        "alphabeta-d2": "ab2", "alphabeta-d3": "ab3"}
 levels = default_levels()
 wanted = set(args.levels.split(",")) if args.levels else None
 t0 = time.time()
