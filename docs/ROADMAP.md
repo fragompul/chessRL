@@ -21,19 +21,19 @@ Status legend: ✅ done · 🚧 in progress · ⬜ planned. Every idea that come
 - [x] CLI play (human vs agent, agent vs agent)
 - [x] Web UI (board, drag & drop, promotion picker, clocks, move list, flip, PGN/FEN copy)
 
-## Phase 3 — RL environment ⬜
-- [ ] Board → tensor encoding (piece planes + castling / ep / repetition / move-count planes)
-- [ ] Action space (AlphaZero-style 8×8×73 or compact from-to-promo) + legal-move mask
-- [ ] Gymnasium-compatible `ChessEnv`
-- [ ] Engine speed pass if profiling says it blocks self-play (see IDEAS: ENG-1, ENG-2)
+## Phase 3 — RL environment ✅
+- [x] Board → tensor encoding (piece planes + castling / ep / repetition / move-count planes)
+- [x] Action space (AlphaZero-style 8×8×73 or compact from-to-promo) + legal-move mask
+- [x] Gymnasium-compatible `ChessEnv`
+- [x] Engine speed pass: profiled — self-play reaches ~8k simulations/s on an M5 with a 64×6 net, so the Python engine is *not* the bottleneck; ENG-1/ENG-2 stay in the backlog
 
-## Phase 4 — Learning by self-play ⬜
-- [ ] Policy/value ResNet (small first, sized for an Apple M-series Mac, MPS)
-- [ ] MCTS with PUCT, Dirichlet noise, temperature schedule
-- [ ] Self-play workers, replay buffer, training loop, checkpointing
-- [ ] Curriculum on endgames (KRK, KPK, KQK) before full games
-- [ ] Experiment tracking (TensorBoard / W&B), reproducible configs
-- [ ] Colab notebook for longer GPU runs
+## Phase 4 — Learning by self-play ✅ (code complete; no training run launched yet)
+- [x] Policy/value ResNet (small first, sized for an Apple M-series Mac, MPS)
+- [x] MCTS with PUCT, Dirichlet noise, temperature schedule
+- [x] Self-play workers, replay buffer, training loop, checkpointing
+- [x] Curriculum on endgames (KRK, KPK, KQK) before full games
+- [x] Experiment tracking: JSONL metrics + `chessrl status`, JSON configs with presets (TensorBoard/W&B left as an idea, TRK-1)
+- [x] Colab notebook for longer GPU runs
 
 ## Phase 5 — Evaluation & Elo ⬜
 - [ ] Match runner, SPRT-style significance, Elo estimation (BayesElo / Ordo-like)

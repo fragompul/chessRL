@@ -15,13 +15,20 @@ right section with the next free ID. Status: `idea` → `planned` (in ROADMAP) �
 ## Learning
 | ID | Idea | Status |
 |----|------|--------|
-| RL-1 | AlphaZero-style self-play with MCTS (PUCT) and policy/value ResNet | planned |
-| RL-2 | Endgame curriculum (KRK → KPK → KQK → …) to bootstrap learning cheaply | planned |
+| RL-1 | AlphaZero-style self-play with MCTS (PUCT) and policy/value ResNet | done |
+| RL-2 | Endgame curriculum (KRK → KPK → KQK → …) to bootstrap learning cheaply | done |
 | RL-3 | Optional supervised warm-start on human games (documented as a deviation from "pure RL") | idea |
-| RL-4 | Population / league training: keep past checkpoints as opponents, avoid forgetting | idea |
+| RL-4 | Population / league training: keep past checkpoints as opponents, avoid forgetting | done (opt-in `league_prob_start`) |
 | RL-5 | Gumbel AlphaZero / fewer simulations per move for faster iteration | idea |
 | RL-6 | Mixed-precision + `torch.compile` on MPS; large runs on Colab GPU | idea |
 | RL-7 | Ablations as a first-class deliverable (net size, sims/move, buffer size, curriculum on/off) | idea |
+
+| RL-8 | Left-right mirror augmentation when nobody can castle | done |
+| RL-9 | Material-based adjudication of move-limit games (off by default: not "pure" RL) | done (opt-in) |
+| TRK-1 | TensorBoard / Weights & Biases logging on top of the JSONL metrics | idea |
+| RL-10 | Resignation threshold with verification games to shorten self-play | idea |
+| RL-11 | Search improvements: transposition reuse across moves, Gumbel root selection, batched virtual loss tuning | idea |
+| RL-12 | Auxiliary heads (material / game phase / moves-left) to speed up learning | idea |
 
 ## Strength levels & human-likeness
 | ID | Idea | Status |

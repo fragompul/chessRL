@@ -5,7 +5,7 @@ it **by self-play**. The long-term goal is a complete chess product: selectable 
 human-like timing and mistakes, a web interface, automatic game annotation, and the ability to
 play on a **real board** through a camera (YOLO-based vision).
 
-> Status: **Phase 1 complete** (rules engine). See the [roadmap](docs/ROADMAP.md).
+> Status: engine, playable UI and the full self-play training stack are implemented and tested; training itself has not been launched yet. See the [roadmap](docs/ROADMAP.md).
 
 ## What exists today
 

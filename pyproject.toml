@@ -14,8 +14,11 @@ dependencies = ["numpy>=1.26"]
 
 [project.optional-dependencies]
 # python-chess is used ONLY as a test oracle, never by the engine itself.
-dev = ["pytest>=8", "python-chess>=1.10", "ruff>=0.5"]
-rl = ["torch>=2.2"]
+dev = ["pytest>=8", "pytest-timeout>=2", "python-chess>=1.10", "ruff>=0.5"]
+rl = ["torch>=2.2", "gymnasium>=0.29"]
+vision = ["opencv-python-headless>=4.8", "pillow>=10"]
+export = ["onnx>=1.16", "onnxruntime>=1.18"]
+all = ["chessrl[rl,vision,export]"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -30,6 +33,7 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+ignore = ["B905"]
 
 [tool.setuptools.package-data]
 chessrl = ["web/static/*"]
