@@ -46,3 +46,31 @@ each iteration; Ctrl-C/SIGTERM and `--max-minutes` stop at a safe point. Weights
 Inside the search tree a position seen twice scores as a draw (prunes cycles); at the root and
 in the game itself the real threefold rule applies. A re-rooted tree is rebuilt if its new root
 was marked terminal only by the in-tree shortcut (found by a stalled-self-play regression test).
+
+## D-011 — Legal move generation avoids make/unmake where possible
+`legal_moves` only verifies by making the move when it can expose the king (king moves, check
+evasions, pinned pieces, en passant). Doubled alpha-beta speed (20k → 36k nodes/s) with perft and
+the differential test as the safety net.
+
+## D-012 — Elo scale
+Ratings are maximum-likelihood estimates with fixed anchors on the Stockfish `UCI_Elo` scale at a
+short fixed move time. We call it "Elo" but document it as a relative scale (see EVALUATION.md).
+Below Stockfish's floor (1320) values are chained through our own weaker agents.
+
+## D-013 — Human-likeness is tuned on error, not on games
+Elo by games is slow, so each level's error parameters are fitted to a target average centipawn
+loss (`levels/tune.py`, cheap, cached move rankings) and Elo is then *measured* with games. The
+first calibration showed the untuned levels playing far below their nominal Elo (e.g. "Club"
+1200 → 721), which is why the tuning step exists.
+
+## D-014 — Vision: explain the picture with a legal move
+The tracker never recognises the board from scratch: the state is known, so it scores every legal
+move (and every legal move pair) by how well its predicted board matches the camera. Frames are
+judged only when still. Appearance is learnt on-line from the known position (no trained model
+needed); a YOLO detector plugs in through the same interface. Per-square appearance uses an
+8×6 luminance patch relative to the square's own border ring (robust to lighting) and a Gaussian
+per exact (square colour, piece) class with an Occam penalty for poorly known classes.
+
+## D-015 — Browser demo is a verified port, not a re-implementation by eye
+`docs/demo/chessrl.js` mirrors the Python encoding and action space; a Node test replays 60 random
+games with chess.js and requires identical planes (SHA-256) and action indices.

@@ -54,27 +54,36 @@ right section with the next free ID. Status: `idea` → `planned` (in ROADMAP) �
 | UI-2 | Clocks and time controls, increments | done |
 | UI-3 | Post-game analysis: accuracy %, eval graph, move classification (brilliant … blunder) | done |
 | UI-4 | Automatic annotation written into PGN comments during play | done |
-| UI-5 | Interpretability view: value heatmap, policy arrows, attention maps (ties to `see-inside-ml`) | idea |
+| UI-5 | Interpretability view: value heatmap, policy arrows, attention maps (ties to `see-inside-ml`) | done |
 | UI-6 | Voice: announce moves with TTS; voice input for moves | idea |
-| UI-7 | In-browser play via ONNX Runtime Web (no server) | idea |
+| UI-7 | In-browser play via ONNX Runtime Web (no server) | done |
 | UI-8 | Lichess bot account running the agent at a chosen level | idea |
 | UI-9 | Opening explorer / "which opening am I in" tagging (ECO) | done |
 
 ## Vision (real board)
 | ID | Idea | Status |
 |----|------|--------|
-| VIS-1 | Board detection + homography from 4 corners, robust to camera angle/lighting | planned |
-| VIS-2 | YOLO piece detector (12 classes), reuse learnings from `edge-multi-object-tracking` | planned |
-| VIS-3 | Synthetic training data (rendered boards/pieces, randomised lighting) to avoid manual labelling | idea |
-| VIS-4 | Legality-constrained tracking: only accept moves that are legal from the previous state | planned |
+| VIS-1 | Board detection + homography from 4 corners, robust to camera angle/lighting | done |
+| VIS-2 | YOLO piece detector (12 classes), reuse learnings from `edge-multi-object-tracking` | done (wrapper + dataset + train script; weights not trained yet) |
+| VIS-3 | Synthetic training data (rendered boards/pieces, randomised lighting) to avoid manual labelling | done |
+| VIS-4 | Legality-constrained tracking: only accept moves that are legal from the previous state | done |
 | VIS-5 | Hand/occlusion handling: decide the move when the hand leaves the board | idea |
-| VIS-6 | Record video + auto-annotated PGN, replay synced with video | planned |
+| VIS-6 | Record video + auto-annotated PGN, replay synced with video | done |
 | VIS-7 | Edge deployment (ONNX / INT8) for Raspberry Pi / phone | idea |
 | VIS-8 | Robot arm or LED board for the AI's physical moves | idea |
 
 ## Project / portfolio
 | ID | Idea | Status |
 |----|------|--------|
-| PRJ-1 | Technical report / blog post: from rules engine to self-play agent | idea |
+| PRJ-1 | Technical report / blog post: from rules engine to self-play agent | draft done, results pending |
 | PRJ-2 | Pin the repo, add GIFs of play and the Elo curve to README | idea |
-| PRJ-3 | Model card for released checkpoints (data, strength, limits) | idea |
+| PRJ-3 | Model card for released checkpoints (data, strength, limits) | template done |
+
+## Added during implementation
+| ID | Idea | Status |
+|----|------|--------|
+| NEW-1 | Re-sync the vision tracker from a single frame when tracking is lost (piece-level estimator) | idea |
+| NEW-2 | Tree search that shares evaluations across transpositions (MCTS DAG) | idea |
+| NEW-3 | Opening trainer: drill a repertoire against the book/AI and score deviations | idea |
+| NEW-4 | Puzzle mode generated from the analyser's critical moments in the user's own games | idea |
+| NEW-5 | Mobile app wrapper (web UI + camera) reusing the ONNX model | idea |

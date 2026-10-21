@@ -1,0 +1,8 @@
+{
+  "name": "chessrl-demo-test",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Checks the browser port of the encoding against the Python implementation",
+  "scripts": { "test": "node test.js" },
+  "dependencies": { "chess.js": "1.0.0" }
+}

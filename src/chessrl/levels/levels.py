@@ -34,6 +34,8 @@ class LevelSpec:
     book_plies: int = 10
     think_speed: float = 1.0
     style: str = "balanced"
+    error_scale: float = 1.0  # multiplies temperature and blunder rate (set by tune.py)
+    acpl: float | None = None  # average centipawn loss achieved at tuning time
     measured_elo: float | None = None  # filled in by calibration
 
     @property
@@ -92,7 +94,8 @@ def make_level_agent(spec: LevelSpec, seed: int | None = None) -> HumanLikeAgent
         base = AlphaBetaAgent(depth=spec.depth, seed=seed)
     return HumanLikeAgent(
         base, spec.display_elo, name=f"{spec.name} ({int(spec.display_elo)})",
-        temperature=spec.temperature, blunder_rate=spec.blunder_rate, book_plies=spec.book_plies,
+        temperature=spec.temperature * spec.error_scale,
+        blunder_rate=min(0.9, spec.blunder_rate * spec.error_scale), book_plies=spec.book_plies,
         style=spec.style, think_speed=spec.think_speed, seed=seed,
     )
 

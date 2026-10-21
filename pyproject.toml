@@ -36,7 +36,9 @@ select = ["E", "F", "I", "UP", "B"]
 ignore = ["B905"]
 
 [tool.setuptools.package-data]
-chessrl = ["web/static/*"]
+chessrl = ["web/static/*", "levels/levels.json", "agents/baseline_elo.json"]
 
 [tool.ruff.lint.per-file-ignores]
 "src/chessrl/eval/plots.py" = ["E501"]
+"src/chessrl/vision/*.py" = ["E501"]
+"tests/vision/*.py" = ["E501"]

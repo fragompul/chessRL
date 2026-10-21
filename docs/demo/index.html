@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>chessRL in your browser</title>
+<style>
+  :root { --bg:#14171c; --panel:#1d2128; --panel2:#262b34; --text:#e6e8ec; --muted:#8b93a1; --accent:#4aaec0;
+          --light:#ead9b6; --dark:#b08462; --sel:rgba(74,174,192,.55); --last:rgba(255,214,102,.45); }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  header { padding:14px 20px; border-bottom:1px solid #2a2f38; display:flex; gap:12px; align-items:baseline; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; } header span { color:var(--muted); font-size:13px; }
+  main { display:flex; flex-wrap:wrap; gap:20px; justify-content:center; padding:20px; }
+  #board { width:min(92vw,560px); aspect-ratio:1; display:grid; grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr); border-radius:6px; overflow:hidden; user-select:none; }
+  .sq { position:relative; display:flex; align-items:center; justify-content:center; cursor:pointer; min-width:0; min-height:0; overflow:hidden; }
+  .sq.l { background:var(--light); } .sq.d { background:var(--dark); }
+  .sq.sel::before,.sq.last::before { content:""; position:absolute; inset:0; } .sq.sel::before { background:var(--sel); } .sq.last::before { background:var(--last); }
+  .dot { position:absolute; width:28%; height:28%; border-radius:50%; background:rgba(20,30,40,.35); } .ring { position:absolute; inset:4%; border-radius:50%; border:5px solid rgba(20,30,40,.35); }
+  .piece { font-size:min(8vw,50px); line-height:1; z-index:1; font-family:"Segoe UI Symbol","Noto Sans Symbols 2","Apple Symbols",serif; }
+  .piece.w { color:#fff; text-shadow:0 0 2px #000,0 0 2px #000,0 1px 3px #000; } .piece.b { color:#111; text-shadow:0 0 1px #fff; }
+  .side { width:min(92vw,340px); display:flex; flex-direction:column; gap:12px; }
+  .card { background:var(--panel); border-radius:10px; padding:12px 14px; } .card h3 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }
+  label { display:block; font-size:12px; color:var(--muted); margin:8px 0 3px; }
+  select,input[type=range] { width:100%; } select { background:var(--panel2); color:var(--text); border:1px solid #343b47; border-radius:6px; padding:7px 8px; font:inherit; }
+  button { background:var(--panel2); color:var(--text); border:1px solid #343b47; border-radius:6px; padding:7px 12px; font:inherit; cursor:pointer; } button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); color:#031418; border:0; font-weight:700; } .row { display:flex; gap:8px; flex-wrap:wrap; }
+  #status { font-weight:600; } #info { color:var(--muted); font-size:13px; min-height:2.6em; } #moves { font:14px ui-monospace,Menlo,monospace; max-height:160px; overflow:auto; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<header><h1>chessRL</h1><span>a self-play neural network, running entirely in your browser</span></header>
+<main>
+  <div id="board"></div>
+  <div class="side">
+    <div class="card">
+      <h3>Model</h3>
+      <div id="modelStatus" class="small">Loading <code>model.onnx</code>…</div>
+      <label>…or load your own ONNX file (exported with <code>python -m chessrl export</code>)</label>
+      <input type="file" id="modelFile" accept=".onnx">
+    </div>
+    <div class="card">
+      <h3>Game</h3>
+      <div id="status">Loading…</div><div id="info"></div>
+      <div class="row" style="margin-top:6px">
+        <button class="primary" id="btnNew">New game</button><button id="btnUndo">Undo</button><button id="btnFlip">Flip</button>
+      </div>
+      <label>Play as</label><select id="color"><option value="w">White</option><option value="b">Black</option></select>
+      <label>Strength</label>
+      <select id="mode"><option value="policy">Policy only (fast, weak)</option><option value="look" selected>Policy + 1-ply value lookahead</option></select>
+      <label>Randomness: <span id="tval">0.30</span></label><input type="range" id="temp" min="0.02" max="1.5" step="0.02" value="0.30">
+    </div>
+    <div class="card"><h3>Moves</h3><div id="moves"></div>
+      <div class="row" style="margin-top:8px"><button id="btnPgn">Copy PGN</button></div></div>
+    <div class="small" style="color:var(--muted);font-size:12px">Inference by <a href="https://onnxruntime.ai/">ONNX Runtime Web</a>, rules by chess.js.
+      Source: <a href="https://github.com/fragompul/chessRL">github.com/fragompul/chessRL</a></div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+<script src="chessrl.js"></script>
+<script type="module">
+import { Chess } from "https://cdn.jsdelivr.net/npm/chess.js@1.0.0/+esm";
+const R = window.ChessRL, $ = (id) => document.getElementById(id);
+const GLYPH = { p:"♟", n:"♞", b:"♝", r:"♜", q:"♛", k:"♚" };
+let chess = new Chess(), session = null, selected = null, flipped = false, human = "w", thinking = false;
+let rngState = 12345; const rng = () => (rngState = (rngState * 1664525 + 1013904223) >>> 0) / 4294967296;
+
+// ---- model ------------------------------------------------------------------------------
+async function loadModel(source, label) {
+  try {
+    ort.env.wasm.numThreads = 1;
+    session = await ort.InferenceSession.create(source, { executionProviders: ["wasm"] });
+    $("modelStatus").textContent = "Model ready: " + label;
+    maybeAI();
+  } catch (e) { session = null; $("modelStatus").textContent = "No model loaded (" + e.message + "). Train one, export it, and pick the file below."; }
+}
+const param = new URLSearchParams(location.search).get("model");
+loadModel(param || "model.onnx", param || "model.onnx");
+$("modelFile").onchange = async (ev) => { const f = ev.target.files[0]; if (f) loadModel(new Uint8Array(await f.arrayBuffer()), f.name); };
+
+// ---- position bookkeeping (repetitions) ------------------------------------------------
+const key = (c) => c.fen().split(" ").slice(0, 4).join(" ");
+function seenCount(c) { const m = new Map(); const g = new Chess(); m.set(key(g), 1);
+  for (const mv of c.history({ verbose: true })) { g.move(mv); m.set(key(g), (m.get(key(g)) || 0) + 1); } return m; }
+
+async function evaluate(batchPlanes, n) {
+  const t = new ort.Tensor("float32", batchPlanes, [n, R.NUM_PLANES, 8, 8]);
+  const out = await session.run({ planes: t });
+  return { logits: out.policy.data, values: out.value.data };
+}
+
+async function chooseMove() {
+  const moves = chess.moves({ verbose: true });
+  const seen = seenCount(chess);
+  const idx = moves.map(R.moveToIndex);
+  const root = await evaluate(R.encodeBoard(chess, (seen.get(key(chess)) || 0) >= 2), 1);
+  const lp = idx.map((i) => root.logits[i]);
+  let score = R.softmax(lp, 1).map((p) => Math.log(p + 1e-9));  // log prior
+  if ($("mode").value === "look" && moves.length > 1) {
+    const planes = new Float32Array(moves.length * R.NUM_PLANES * 64), term = new Array(moves.length).fill(null);
+    moves.forEach((m, i) => {
+      chess.move(m);
+      term[i] = R.terminalValue(chess);
+      const repeated = (seen.get(key(chess)) || 0) >= 1;
+      planes.set(R.encodeBoard(chess, repeated), i * R.NUM_PLANES * 64);
+      chess.undo();
+    });
+    const ev = await evaluate(planes, moves.length);
+    // value is for the side to move in the child, i.e. the opponent: negate it
+    score = score.map((s, i) => 0.35 * s + 3.0 * (term[i] !== null ? -term[i] : -ev.values[i]));
+  }
+  const t = parseFloat($("temp").value);
+  const probs = R.softmax(score, t * (t < 0.05 ? 0.2 : 1.0));
+  return moves[R.sample(probs, rng)];
+}
+
+// ---- UI -----------------------------------------------------------------------------------
+function render() {
+  const el = $("board"); el.innerHTML = "";
+  const board = chess.board(), hist = chess.history({ verbose: true }), last = hist[hist.length - 1];
+  const targets = selected ? chess.moves({ square: selected, verbose: true }).map((m) => m.to) : [];
+  const blackBottom = (human === "b") !== flipped;
+  for (let vr = 0; vr < 8; vr++) for (let vf = 0; vf < 8; vf++) {
+    const rank = blackBottom ? vr : 7 - vr, file = blackBottom ? 7 - vf : vf, name = "abcdefgh"[file] + (rank + 1);
+    const d = document.createElement("div"); d.className = "sq " + ((rank + file) % 2 ? "l" : "d"); d.dataset.sq = name;
+    if (last && (last.from === name || last.to === name)) d.classList.add("last");
+    if (selected === name) d.classList.add("sel");
+    const p = board[7 - rank][file];
+    if (p) { const s = document.createElement("span"); s.className = "piece " + p.color; s.textContent = GLYPH[p.type]; d.appendChild(s); }
+    if (targets.includes(name)) { const t = document.createElement("span"); t.className = p ? "ring" : "dot"; d.appendChild(t); }
+    d.onclick = () => click(name); el.appendChild(d);
+  }
+  let s = chess.isCheckmate() ? "Checkmate — " + (chess.turn() === "w" ? "Black" : "White") + " wins"
+        : chess.isDraw() ? "Draw" : (chess.turn() === "w" ? "White" : "Black") + " to move" + (chess.inCheck() ? " — check!" : "");
+  if (thinking) s += " (AI thinking…)";
+  $("status").textContent = s;
+  const sans = chess.history(); let html = "";
+  for (let i = 0; i < sans.length; i += 2) html += `${i / 2 + 1}. ${sans[i]} ${sans[i + 1] || ""}<br>`;
+  $("moves").innerHTML = html; $("moves").scrollTop = 1e6;
+}
+
+async function click(name) {
+  if (thinking || chess.isGameOver() || chess.turn() !== human) return;
+  if (selected && chess.moves({ square: selected, verbose: true }).some((m) => m.to === name)) {
+    const m = chess.moves({ square: selected, verbose: true }).find((m) => m.to === name && (!m.promotion || m.promotion === "q"));
+    chess.move(m); selected = null; render(); return maybeAI();
+  }
+  const p = chess.get(name);
+  selected = p && p.color === human ? name : null; render();
+}
+
+async function maybeAI() {
+  if (!session || chess.isGameOver() || chess.turn() === human || thinking) return;
+  thinking = true; render();
+  await new Promise((r) => setTimeout(r, 30));
+  try {
+    const t0 = performance.now(); const m = await chooseMove(); chess.move(m);
+    $("info").textContent = `AI played ${m.san} in ${(performance.now() - t0).toFixed(0)} ms`;
+  } catch (e) { $("info").textContent = "inference error: " + e.message; }
+  thinking = false; render();
+}
+
+$("temp").oninput = () => ($("tval").textContent = parseFloat($("temp").value).toFixed(2));
+$("btnNew").onclick = () => { chess = new Chess(); human = $("color").value; selected = null; flipped = false; render(); maybeAI(); };
+$("btnUndo").onclick = () => { if (thinking) return; chess.undo(); if (chess.turn() !== human) chess.undo(); selected = null; render(); };
+$("btnFlip").onclick = () => { flipped = !flipped; render(); };
+$("btnPgn").onclick = () => { navigator.clipboard.writeText(chess.pgn()); $("info").textContent = "PGN copied"; };
+render();
+window.__chess = () => chess; window.__R = R;
+</script>
+</body>
+</html>

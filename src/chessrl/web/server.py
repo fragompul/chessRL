@@ -158,6 +158,40 @@ class Hub:
         threading.Thread(target=run, daemon=True).start()
         return job
 
+    # ------------------------------------------------------------- insight
+    def insight(self, sid: str, top: int = 5) -> dict:
+        """What the AI 'sees' in the current position: ranked candidate moves with their share
+        of the search (network agents: MCTS visits) or a softmax over centipawn scores."""
+        import math
+
+        from ..agents.base import SearchLimits
+
+        s = self.get(sid)
+        board = s.board.copy()
+        agent = getattr(s.ai, "base", s.ai)
+        if s.over or agent is None:
+            return {"moves": []}
+        limits = SearchLimits(time=1.0)
+        rows = []
+        if hasattr(agent, "analyse"):
+            a = agent.analyse(board, limits)
+            total = max(float(a.visits.sum()), 1.0)
+            from ..agents.neural import q_to_cp
+
+            for m, v, q in zip(a.moves, a.visits, a.q, strict=False):
+                rows.append({"uci": m.uci(), "san": board.san(m), "share": float(v) / total,
+                             "cp": q_to_cp(float(q)), "prior": 0.0})
+        else:
+            scores = agent.score_moves(board, limits)
+            cps = [max(min(sc, 1500.0), -1500.0) for _, sc in scores]
+            top_cp = max(cps)
+            w = [math.exp((c - top_cp) / 80.0) for c in cps]
+            tot = sum(w)
+            for (m, _), c, wi in zip(scores, cps, w, strict=False):
+                rows.append({"uci": m.uci(), "san": board.san(m), "share": wi / tot, "cp": c, "prior": 0.0})
+        rows.sort(key=lambda r: -r["share"])
+        return {"moves": rows[:top], "turn": "white" if board.turn == WHITE else "black"}
+
     # -------------------------------------------------------------- actions
     def move(self, sid: str, uci: str) -> dict:
         self.get(sid).play_human(uci)
@@ -241,6 +275,8 @@ def make_handler(hub: Hub):
                 if method == "POST" and path == "/api/analysis/start":
                     job = hub.start_analysis(sid)
                     return self._json({k: v for k, v in job.items() if k != "result"})
+                if method == "GET" and path == "/api/insight":
+                    return self._json(hub.insight(sid))
                 if method == "GET" and path == "/api/analysis":
                     job = hub.analyses.get(sid)
                     return self._json(job or {"status": "none"})

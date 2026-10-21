@@ -1,0 +1,102 @@
+{
+  "scale": "Stockfish UCI_Elo anchors [1320, 1500], 50 ms/move, 6 games per pairing, random 4-ply openings",
+  "ratings": {
+    "alphabeta-d1": 1271,
+    "alphabeta-d2": 1444,
+    "alphabeta-d3": 1643,
+    "greedy": 671,
+    "random": 118
+  },
+  "results": {
+    "random vs greedy": [
+      0,
+      0,
+      6
+    ],
+    "random vs alphabeta-d1": [
+      0,
+      0,
+      6
+    ],
+    "random vs alphabeta-d2": [
+      0,
+      0,
+      6
+    ],
+    "random vs alphabeta-d3": [
+      0,
+      0,
+      6
+    ],
+    "greedy vs alphabeta-d1": [
+      0,
+      0,
+      6
+    ],
+    "greedy vs alphabeta-d2": [
+      0,
+      0,
+      6
+    ],
+    "greedy vs alphabeta-d3": [
+      0,
+      0,
+      6
+    ],
+    "alphabeta-d1 vs alphabeta-d2": [
+      0,
+      2,
+      4
+    ],
+    "alphabeta-d1 vs alphabeta-d3": [
+      0,
+      2,
+      4
+    ],
+    "alphabeta-d2 vs alphabeta-d3": [
+      0,
+      1,
+      5
+    ],
+    "greedy vs stockfish-1320": [
+      0,
+      0,
+      6
+    ],
+    "alphabeta-d1 vs stockfish-1320": [
+      4,
+      0,
+      2
+    ],
+    "alphabeta-d2 vs stockfish-1320": [
+      4,
+      1,
+      1
+    ],
+    "alphabeta-d3 vs stockfish-1320": [
+      6,
+      0,
+      0
+    ],
+    "greedy vs stockfish-1500": [
+      0,
+      0,
+      6
+    ],
+    "alphabeta-d1 vs stockfish-1500": [
+      0,
+      0,
+      6
+    ],
+    "alphabeta-d2 vs stockfish-1500": [
+      2,
+      1,
+      3
+    ],
+    "alphabeta-d3 vs stockfish-1500": [
+      3,
+      0,
+      3
+    ]
+  }
+}

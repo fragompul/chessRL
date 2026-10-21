@@ -52,13 +52,19 @@ Status legend: ✅ done · 🚧 in progress · ⬜ planned. Every idea that come
 - [x] Automatic annotation while playing (eval swings, !? / ?? tags, comments in PGN)
 - [x] Post-game analysis: accuracy %, eval graph, critical moments
 
-## Phase 8 — Real-board vision ⬜
-- [ ] Board detection + homography (4 corners), square grid
-- [ ] Piece detection (YOLO, 12 classes), synthetic-data generation for training
-- [ ] Position tracking via legality: infer the played move from frame diffs + legal moves
-- [ ] Live recording, auto PGN, AI suggests / plays replies (TTS optional)
+## Phase 8 — Real-board vision ✅ (validated on synthetic footage)
+- [x] Board detection + homography (4 corners), square grid
+- [x] Piece detection (YOLO, 12 classes), synthetic-data generation for training
+- [x] Position tracking via legality: infer the played move from frame diffs + legal moves
+- [x] Live recording, auto PGN, AI suggests / plays replies (TTS optional)
 
-## Phase 9 — Showcase ⬜
-- [ ] ONNX export + in-browser demo (play the AI with no server)
-- [ ] Interpretability views (value heatmaps, policy arrows)
-- [ ] Write-up / blog post / technical report
+## Phase 9 — Showcase ✅ (report/results pending a training run)
+- [x] ONNX export + in-browser demo (`docs/demo`, GitHub-Pages ready, JS port verified bit-exact against Python)
+- [x] Interpretability view: what the AI considers (arrows with search share / evaluation)
+- [x] Technical report draft (`docs/REPORT.md`), model card template; results sections wait for a training run
+
+## Phase 10 — First training campaign ⬜ (next)
+- [ ] Smoke-test long run on the Mac preset, tune sims / batch / replay ratio from metrics
+- [ ] Colab runs in sessions; publish snapshots + Elo-vs-iteration curve
+- [ ] Calibrate network levels (`levels.json` with `engine: net`)
+- [ ] Ablations (RL-7), fill in REPORT.md and MODEL_CARD.md

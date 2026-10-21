@@ -89,3 +89,12 @@ def test_live_annotation_and_analysis_endpoints(base):
             break
         time.sleep(0.1)
     assert job["status"] == "done" and "accuracy" in job["result"] and job["result"]["svg"].startswith("<svg")
+
+
+def test_insight_endpoint(base):
+    sid = call(base, "/api/new", {"color": "white", "opponent": "ab2", "realtime": False, "seed": 0})["sid"]
+    ins = call(base, f"/api/insight?sid={sid}")
+    assert 1 <= len(ins["moves"]) <= 5 and ins["turn"] == "white"
+    shares = [m["share"] for m in ins["moves"]]
+    assert shares == sorted(shares, reverse=True) and 0 < sum(shares) <= 1.0001
+    assert {"uci", "san", "cp"} <= set(ins["moves"][0])

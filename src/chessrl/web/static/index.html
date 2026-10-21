@@ -43,11 +43,12 @@
            font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "Apple Symbols", serif; }
   .piece.w { color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000, 0 1px 3px #000; }
   .piece.b { color: #111; text-shadow: 0 0 1px #fff; }
-  .boardrow { display: flex; gap: 8px; align-items: stretch; }
+  .boardrow { display: flex; gap: 8px; align-items: stretch; position: relative; }
   .boardrow #board { flex: 1; }
   #evalbar { width: 18px; background: #2a2f38; border-radius: 4px; position: relative; overflow: hidden; }
   #evalfill { position: absolute; left: 0; right: 0; background: #eceff3; transition: height .4s; }
   #evaltxt { position: absolute; left: 0; right: 0; font-size: 9px; text-align: center; color: #888; }
+  #arrows { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
   #opening { color: var(--accent); font-size: 13px; min-height: 1.3em; margin-bottom: 6px; }
   #analysis .acc { display: flex; gap: 14px; margin: 6px 0; font-size: 14px; }
   #analysis svg { width: 100%; height: auto; border-radius: 6px; margin-top: 6px; }
@@ -83,7 +84,7 @@
 <main>
   <div class="boardwrap">
     <div class="player" id="topPlayer"><span class="name" id="topName">–</span><span class="clock" id="topClock">--:--</span></div>
-    <div class="boardrow"><div id="evalbar" title="Evaluation (needs live annotation)"><div id="evalfill"></div><span id="evaltxt"></span></div><div id="board"></div></div>
+    <div class="boardrow"><div id="evalbar" title="Evaluation (needs live annotation)"><div id="evalfill"></div><span id="evaltxt"></span></div><div id="board"></div><svg id="arrows" viewBox="0 0 100 100"></svg></div>
     <div class="player" id="botPlayer"><span class="name" id="botName">–</span><span class="clock" id="botClock">--:--</span></div>
     <div id="thinking"></div>
   </div>
@@ -102,6 +103,7 @@
       <label><input type="checkbox" id="optRealtime" checked> Realistic thinking time</label>
       <label><input type="checkbox" id="optTakebacks" checked> Allow takebacks</label>
       <label><input type="checkbox" id="optLive"> Live annotation (eval bar, ?! ?? marks)</label>
+      <label><input type="checkbox" id="optInsight"> Show what the AI is considering (arrows)</label>
       <div class="row" style="margin-top:10px"><button class="primary" id="btnNew">Start</button></div>
     </div>
     <div class="card">
@@ -207,9 +209,26 @@ function renderEval() {
   fill.style.background = blackBottom ? "#14171c" : "#eceff3"; bar.style.background = blackBottom ? "#eceff3" : "#2a2f38";
   txt.textContent = Math.abs(S.live_eval) >= 9000 ? "M" : (S.live_eval / 100).toFixed(1); txt.style.top = "2px";
 }
+let insightTimer = null;
+async function drawInsight() {
+  const svg = $("arrows"); svg.innerHTML = "";
+  if (!$("optInsight").checked || !S || S.over || !S.sid) return;
+  let j; try { j = await api(withSid("/api/insight")); } catch (e) { return; }
+  if (!j.moves || !j.moves.length) return;
+  const orient = (S.human === "black") !== flipped;
+  const center = (sq) => { const f = sq % 8, r = Math.floor(sq / 8); const col = orient ? 7 - f : f, row = orient ? r : 7 - r; return [col * 12.5 + 6.25, row * 12.5 + 6.25]; };
+  svg.innerHTML = '<defs><marker id="ah" markerWidth="4" markerHeight="4" refX="2.2" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 z" fill="#4aaec0"/></marker></defs>';
+  j.moves.slice(0, 3).forEach((m, i) => {
+    const a = center(sqNum(m.uci.slice(0, 2))), b = center(sqNum(m.uci.slice(2, 4)));
+    const w = 0.6 + 2.6 * m.share, op = 0.9 - i * 0.22;
+    svg.innerHTML += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#4aaec0" stroke-width="${w}" opacity="${op}" stroke-linecap="round" marker-end="url(#ah)"/>` +
+      `<text x="${(a[0] + b[0]) / 2}" y="${(a[1] + b[1]) / 2 - 1}" font-size="3" fill="#fff" text-anchor="middle" opacity="${op}">${m.san} ${(m.cp / 100).toFixed(1)}</text>`;
+  });
+}
 function nameSuffix(color) { if (!S) return ""; if (S.human === color) return " (you)"; if (S.human && S.opponent) return " · " + S.opponent; return ""; }
 
-function setState(s) { const changed = !S || s.fen !== S.fen; S = s; if (changed) { selected = null; hintMove = null; } render(); schedulePoll(); }
+function setState(s) { const changed = !S || s.fen !== S.fen; S = s; if (changed) { selected = null; hintMove = null; } render(); schedulePoll();
+  if (changed) { clearTimeout(insightTimer); $("arrows").innerHTML = ""; if ($("optInsight").checked && !s.thinking) insightTimer = setTimeout(drawInsight, 300); } }
 function schedulePoll() {
   clearTimeout(polling);
   if (!S || S.over) return;
@@ -284,6 +303,7 @@ async function analyze() {
   poll();
 }
 $("btnAnalyze").onclick = analyze;
+$("optInsight").onchange = drawInsight;
 $("btnNew").onclick = newGame;
 $("btnTake").onclick = () => action("takeback"); $("btnHint").onclick = () => action("hint");
 $("btnDraw").onclick = () => action("draw"); $("btnResign").onclick = () => { if (S && !S.over) action("resign"); };

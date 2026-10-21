@@ -16,6 +16,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,rl,vision,export]"
       - run: ruff check .
       - run: pytest -q
+
+  js-port:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+        working-directory: docs/demo/test
+      - run: node test.js
+        working-directory: docs/demo/test
