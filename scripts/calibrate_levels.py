@@ -21,7 +21,8 @@ from chessrl.levels.levels import LEVELS_FILE, default_levels, make_level_agent,
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--games", type=int, default=4, help="games per (level, anchor) pairing")
-ap.add_argument("--anchors", default="ab1,ab2,ab3")
+ap.add_argument("--anchors", default="auto",
+                help="comma list of agent specs, or `auto`: the 3 anchors closest in rating to each level")
 ap.add_argument("--levels", default=None, help="comma list of level names (default: all)")
 ap.add_argument("--force", action="store_true")
 ap.add_argument("--max-plies", type=int, default=200)
@@ -29,7 +30,7 @@ args = ap.parse_args()
 
 baseline = json.loads((Path(__file__).parent.parent / "src/chessrl/agents/baseline_elo.json").read_text())
 anchor_elo = {k: float(v) for k, v in baseline["ratings"].items()}
-anchors = [make_agent(a, seed=1) for a in args.anchors.split(",")]
+pool = {"random": "random", "greedy": "greedy", "alphabeta-d1": "ab1", "alphabeta-d2": "ab2", "alphabeta-d3": "ab3"}
 levels = default_levels()
 wanted = set(args.levels.split(",")) if args.levels else None
 t0 = time.time()
@@ -39,6 +40,11 @@ for lv in levels:
         continue
     agent = make_level_agent(lv, seed=0)
     results = []
+    if args.anchors == "auto":
+        names = sorted(anchor_elo, key=lambda n: abs(anchor_elo[n] - lv.elo))[:3]
+        anchors = [make_agent(pool[n], seed=1) for n in names]
+    else:
+        anchors = [make_agent(a, seed=1) for a in args.anchors.split(",")]
     for anchor in anchors:
         m = play_match(agent, anchor, args.games, max_plies=args.max_plies, seed=7)
         s = m.stats

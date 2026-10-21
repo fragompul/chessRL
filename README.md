@@ -7,8 +7,10 @@ the ability to play on a **real board** through a camera.
 
 ![Web UI: AI arrows, evaluation bar, opening detection and live ?! annotation](docs/img/web-ui.jpg)
 
-> **Status.** All the pieces are implemented and tested (~170 tests). **No training run has been
-> launched yet** — the self-play stack is ready and resumable (see [docs/TRAINING.md](docs/TRAINING.md));
+> **Live demo:** https://fragompul.github.io/chessRL/demo/ (loads `model.onnx` once a trained network is published).
+>
+> **Status.** All the pieces are implemented and tested (~170 tests). **The first training campaign
+> is under way** — the self-play stack is resumable (see [docs/TRAINING.md](docs/TRAINING.md));
 > until then the playable opponents are the classical baselines and humanised alpha-beta levels.
 > Results/Elo-vs-training curves will be added to the [report](docs/REPORT.md) after the first run.
 

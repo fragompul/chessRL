@@ -12,3 +12,4 @@ data/
 *.pt
 *.onnx
 wandb/
+runs_main_session*.log

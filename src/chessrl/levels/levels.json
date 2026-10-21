@@ -13,7 +13,7 @@
     "style": "balanced",
     "error_scale": 0.375,
     "acpl": 149.3,
-    "measured_elo": 721
+    "measured_elo": 740
   },
   {
     "name": "Casual",
@@ -29,7 +29,7 @@
     "style": "balanced",
     "error_scale": 0.37,
     "acpl": 123.8,
-    "measured_elo": 721
+    "measured_elo": 749
   },
   {
     "name": "Novice",
@@ -45,7 +45,7 @@
     "style": "balanced",
     "error_scale": 0.443,
     "acpl": 104.2,
-    "measured_elo": null
+    "measured_elo": 886
   },
   {
     "name": "Club",
@@ -61,7 +61,7 @@
     "style": "balanced",
     "error_scale": 0.497,
     "acpl": 88.7,
-    "measured_elo": null
+    "measured_elo": 721
   },
   {
     "name": "Intermediate",
@@ -77,7 +77,7 @@
     "style": "balanced",
     "error_scale": 0.563,
     "acpl": 71.0,
-    "measured_elo": null
+    "measured_elo": 1150
   },
   {
     "name": "Advanced",
@@ -93,7 +93,7 @@
     "style": "balanced",
     "error_scale": 0.748,
     "acpl": 59.5,
-    "measured_elo": null
+    "measured_elo": 721
   },
   {
     "name": "Expert",
@@ -109,7 +109,7 @@
     "style": "balanced",
     "error_scale": 0.941,
     "acpl": 46.0,
-    "measured_elo": null
+    "measured_elo": 923
   },
   {
     "name": "Candidate Master",
@@ -125,7 +125,7 @@
     "style": "balanced",
     "error_scale": 1.199,
     "acpl": 35.9,
-    "measured_elo": null
+    "measured_elo": 1094
   },
   {
     "name": "Master",
@@ -141,6 +141,6 @@
     "style": "balanced",
     "error_scale": 0.949,
     "acpl": 28.4,
-    "measured_elo": null
+    "measured_elo": 1386
   }
 ]
