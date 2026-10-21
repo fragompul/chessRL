@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# training artefacts (large; publish selected checkpoints via releases instead)
+runs/
+checkpoints/
+data/
+*.pt
+*.onnx
+wandb/

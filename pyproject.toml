@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chessrl"
+version = "0.1.0"
+description = "A from-scratch chess engine and a reinforcement-learning agent that learns to play it by self-play."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Francisco Javier Gómez Pulido" }]
+dependencies = ["numpy>=1.26"]
+
+[project.optional-dependencies]
+# python-chess is used ONLY as a test oracle, never by the engine itself.
+dev = ["pytest>=8", "python-chess>=1.10", "ruff>=0.5"]
+rl = ["torch>=2.2"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: long-running tests (deselect with -m 'not slow')"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
