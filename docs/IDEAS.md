@@ -87,3 +87,4 @@ right section with the next free ID. Status: `idea` → `planned` (in ROADMAP) �
 | NEW-3 | Opening trainer: drill a repertoire against the book/AI and score deviations | idea |
 | NEW-4 | Puzzle mode generated from the analyser's critical moments in the user's own games | idea |
 | NEW-5 | Mobile app wrapper (web UI + camera) reusing the ONNX model | idea |
+| NEW-6 | Diagnose slow learning in `runs/main` (iter 25→221: policy loss flat ~2.65 vs MCTS target entropy ~2.09 nats; 0.0 vs alphabeta-d1/d2 on only 6 eval games). Try: more sims, larger net/Colab preset, more eval games for a less noisy signal, log target entropy in metrics.jsonl (done: `target_entropy`; KL still open) | in progress |

@@ -168,11 +168,13 @@ class Trainer:
         steps = int(np.clip(round(new_positions * cfg.replay_ratio / cfg.batch_size),
                             cfg.min_steps_per_iter, cfg.max_steps_per_iter))
         self.net.train()
-        tot = pl = vl = 0.0
+        tot = pl = vl = ent = 0.0
         t0 = time.perf_counter()
         for _ in range(steps):
             batch = self.buffer.sample(cfg.batch_size, self.rng)
             loss, p_l, v_l = policy_value_loss(self.net, batch, self.device, cfg.value_loss_weight)
+            probs = batch[2]
+            ent += float(-(probs * probs.clamp(min=1e-12).log()).sum(dim=1).mean())
             self.opt.zero_grad(set_to_none=True)
             loss.backward()
             if cfg.grad_clip:
@@ -184,7 +186,8 @@ class Trainer:
         self.net.eval()
         self.state["steps"] += steps
         return {"steps": steps, "loss": round(tot / steps, 4), "policy_loss": round(pl / steps, 4),
-                "value_loss": round(vl / steps, 4), "train_seconds": round(time.perf_counter() - t0, 2)}
+                "value_loss": round(vl / steps, 4), "target_entropy": round(ent / steps, 4),
+                "train_seconds": round(time.perf_counter() - t0, 2)}
 
     def _league_opponents(self) -> list[tuple[str, NetEvaluator]]:
         if self.cfg.league_prob_start <= 0:
